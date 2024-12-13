@@ -11,7 +11,7 @@ const fs = require("fs");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("create-embed")
+    .setName("hideslip")
     .setDescription("Create a new embed dynamically")
     .addStringOption((option) =>
       option

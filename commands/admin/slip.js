@@ -7,11 +7,10 @@ const {
   ButtonBuilder,
 } = require("discord.js");
 require("dotenv").config();
-const fs = require("fs");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("create-embed")
+    .setName("slip")
     .setDescription("Create a new embed dynamically")
     .addStringOption((option) =>
       option
@@ -59,23 +58,6 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    let components = JSON.parse(fs.readFileSync("./components.json", "utf8"));
-    function makeid(length) {
-      let result = "";
-      const characters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      const charactersLength = characters.length;
-      let counter = 0;
-      while (counter < length) {
-        result += characters.charAt(
-          Math.floor(Math.random() * charactersLength)
-        );
-        counter += 1;
-      }
-      return result;
-    }
-
-    console.log(makeid(5));
     if (
       !interaction.member.permissions.has(PermissionFlagsBits.Administrator)
     ) {
@@ -95,30 +77,31 @@ module.exports = {
 
       return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
+    function emoji(name) {
+      if (name === "FanDuel") {
+        return "<:fan:1316915820923846739>";
+      } else if (name === "BetMGM") {
+        return "<:betmgm:1316915779954016328>";
+      } else if (name === "DraftKings") {
+        return "<:draft:1316915794948390912>";
+      } else if (name === "PrizePicks") {
+        return "<:prizepicks:1316915840792395816>";
+      } else {
+        return "<:espn:1316915808592597122>";
+      }
+    }
 
-    const id = makeid(10);
     const description = interaction.options.getString("description");
     const units = interaction.options.getString("units");
     const betlink = interaction.options.getString("link");
     const link_type = interaction.options.getString("sportsbook");
     const image = interaction.options.getAttachment("image");
     const role = interaction.options.getRole("role");
-    const toViewComponent = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`${id}`)
-        .setLabel("Generate View")
-        .setEmoji("💲")
-        .setStyle(ButtonStyle.Primary)
-    );
-    const toView = new EmbedBuilder()
+
+    const embed = new EmbedBuilder()
       .setThumbnail(interaction.guild.iconURL())
-      .setDescription(
-        `> Dear member, a new **bet share** has been published!\n> Please click on the **Generate View** button below to view the bet data.`
-      )
+      .setDescription(`> ${description}\n\n> **Units:**\n> ${units}`)
       .setTimestamp()
-      .setImage(
-        "https://w0.peakpx.com/wallpaper/334/488/HD-wallpaper-chart-cryptocurrency-black-violet-blue-candlestick-bitcoin.jpg"
-      )
       .setAuthor({
         name: `${interaction.client.user.username}`,
         iconURL: `${interaction.client.user.displayAvatarURL()}`,
@@ -128,22 +111,25 @@ module.exports = {
         text: interaction.user.username,
         iconURL: interaction.user.displayAvatarURL(),
       });
-    await interaction.reply({
-      content: role ? `${role}` : "",
-      embeds: [toView],
-      components: [toViewComponent],
-    });
 
-    components[id] = {
-      description: description,
-      units: units,
-      betlink: betlink,
-      link_type: link_type,
-      image: image ? image.url : null,
-      role: role ? role.id : null,
-    };
-    fs.writeFileSync("./components.json", JSON.stringify(components), (err) => {
-      if (err) console.log(err);
+    if (image) embed.setImage(image.url);
+
+    const actionRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setURL(betlink)
+        .setEmoji(`${emoji(link_type)}`)
+        .setLabel(`Place This Bet on ${link_type}`)
+        .setStyle(ButtonStyle.Link)
+    );
+
+    await interaction.channel.send({
+      content: role ? `${role}` : "",
+      embeds: [embed],
+      components: [actionRow],
+    });
+    await interaction.reply({
+      ephemeral: true,
+      content: `> :white_check_mark: Successfully sent the embed to ${interaction.channel}.`,
     });
   },
 };
